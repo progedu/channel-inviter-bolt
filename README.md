@@ -1,6 +1,6 @@
 # チャンネル招待ボット Bolt版
-招待コマンド受け取りBot部分と招待API実行部分で異なるクライアントを利用して動作する招待システム。
 
+招待コマンド受け取りBot部分と招待API実行部分で異なるクライアントを利用して動作する招待システム。np
 
 ## 使い方
 
@@ -23,6 +23,7 @@ email から N 高 Slack での名前とユーザー ID を取得: `mail2s>` メ
 # アプリケーションの作成方法
 
 # 招待コマンド受け取りBot側アプリケーション設定
+
 `SLACK_BOT_TOKEN` と `SLACK_APP_TOKEN` を利用。
 
 ## Bot Token Scope の設定 (OAuth & Permissions)
@@ -41,6 +42,7 @@ email から N 高 Slack での名前とユーザー ID を取得: `mail2s>` メ
 - message.mpim
 
 # 招待API実行側
+
 `INVITER_SLACK_USER_TOKEN` と `INVITER_SLACK_SIGNING_SECRET` を利用。
 
 ## User Token Scope の設定 (OAuth & Permissions)

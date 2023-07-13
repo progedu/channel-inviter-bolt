@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node dist/index.js",
     "build": "node_modules/.bin/tsc",
-    "lint": "node_modules/.bin/prettier src --write"
+    "lint": "node_modules/.bin/prettier src --write",
+    "prepare": "husky install"
   },
   "repository": {
     "type": "git",
@@ -18,7 +19,12 @@
     "url": "https://github.com/progedu/channel-inviter-bolt/issues"
   },
   "homepage": "https://github.com/progedu/channel-inviter-bolt#readme",
+  "lint-staged": {
+    "**/*": "prettier --write --ignore-unknown"
+  },
   "devDependencies": {
+    "husky": "^8.0.3",
+    "lint-staged": "^13.2.3",
     "prettier": "^3.0.0",
     "typescript": "^5.1.6"
   }
