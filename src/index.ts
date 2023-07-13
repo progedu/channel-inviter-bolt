@@ -1,5 +1,8 @@
 import { App, LogLevel, GenericMessageEvent } from '@slack/bolt';
-import { UsersLookupByEmailResponse } from '@slack/web-api';
+import {
+  UsersLookupByEmailResponse,
+  ConversationsMembersResponse,
+} from '@slack/web-api';
 
 const inviter = process.env.SLACK_INVETER || 'sifue';
 
@@ -155,6 +158,74 @@ appBot.message(
     await say(`[INFO] 全 ${counter} 件の処理を終えました。`);
   },
 );
+
+// email情報からSlackIDを取得
+appBot.message(/^!member-cp ([^ ]+) ([^ ]+)$/i, async ({ message, say }) => {
+  const m = message as GenericMessageEvent;
+  const parsed = m.text?.match(/^!member-cp ([^ ]+) ([^ ]+)$/i);
+  if (!parsed) {
+    await say(`引数が指定されていません。`);
+    return;
+  }
+
+  const fromCahnnelID = parsed[1];
+  if (!fromCahnnelID) {
+    await say(`[ERROR] fromCahnnelIDが指定されていません。`);
+    return;
+  }
+
+  const toCahnnelID = parsed[2];
+  if (!toCahnnelID) {
+    await say(`[ERROR] toCahnnelID`);
+    return;
+  }
+
+  await say(
+    `[INFO]  元チャンネルID: ${fromCahnnelID} から 先チャンネルID: ${toCahnnelID} へのメンバーのコピーを行います。`,
+  );
+
+  try {
+    let nextCursor;
+    let conversationslMembersResult: ConversationsMembersResponse;
+    let members: string[] = [];
+
+    // next_coursorをたどってチャンネルの全ユーザーを取得
+    do {
+      conversationslMembersResult =
+        (await appWebAPI.client.conversations.members({
+          cursor: nextCursor,
+          channel: fromCahnnelID,
+          limit: 12000, // 検証したところ12000が限界の様子、ドキュメントには書いていない
+        })) as ConversationsMembersResponse;
+      if (conversationslMembersResult.members) {
+        members = members.concat(conversationslMembersResult.members);
+      }
+      nextCursor = conversationslMembersResult.response_metadata?.next_cursor;
+    } while (nextCursor);
+
+    let count = 1;
+    for (const member of members) {
+      try {
+        await appWebAPI.client.conversations.invite({
+          channel: toCahnnelID,
+          users: member,
+        });
+        await say(
+          `[INFO] userID: ${member} channelId: ${toCahnnelID} の招待を行いました。 (${count}/${members.length})`,
+        );
+      } catch (err) {
+        await say(
+          `[ERROR] SlackでのAPIの実行エラー member: ${member} toCahnnelID: ${toCahnnelID}  err: ${err} (${count}/${members.length})`,
+        );
+      }
+      count++;
+    }
+  } catch (err) {
+    await say(
+      `[ERROR] SlackでのAPIの実行エラー fromCahnnelID: ${fromCahnnelID} toCahnnelID: ${toCahnnelID}  err: ${err}`,
+    );
+  }
+});
 
 /**
  * 指定時間処理を停止する関数
