@@ -73,6 +73,89 @@ appBot.message(/^!mail2s(( [^ ]+){1,})$/i, async ({ message, say }) => {
   }
 });
 
+// チャンネル招待など
+appBot.message(
+  /^!chan-(in-conv|kick-conv)(( [^ ]+){2,})$/i,
+  async ({ message, say }) => {
+    const m = message as GenericMessageEvent;
+    const parsed = m.text?.match(/^!chan-(in-conv|kick-conv)(( [^ ]+){2,})$/i);
+    if (!parsed) {
+      await say(`[ERROR] 正しいコマンドではありません。。`);
+      return;
+    }
+
+    const execMode = parsed[1];
+    if (!execMode) {
+      await say(`[ERROR] 正しいコマンドではありません。。`);
+      return;
+    }
+
+    const args = parsed[2].trim().split(' ');
+    const channelId = args[0];
+    if (!channelId) {
+      await say(`[ERROR] 引数にチャンネルIDが設定されていません。`);
+      return;
+    }
+
+    const emails = args.slice(1);
+    if (!emails) {
+      await say(`[ERROR] 引数にメールアドレスが設定されていません。`);
+      return;
+    }
+
+    let counter = 0;
+    for (let email of emails) {
+      try {
+        let regex = /<mailto:(.+)\|/; // 'mailto:'から'|'までの文字列を取得する
+        let match = email.match(regex);
+        if (match) {
+          // もし <mailto:soichiro_yoshimura@nnn.ac.jp|soichiro_yoshimura@nnn.ac.jp> の形式なら中身を取得
+          email = match[1];
+        }
+
+        const rookupByEmailResult = (await appWebAPI.client.users.lookupByEmail(
+          {
+            email,
+          },
+        )) as UsersLookupByEmailResponse;
+        const user = rookupByEmailResult.user;
+
+        if (!user) {
+          await say(`[ERROR] email: ${email} はSlackに登録されていません。`);
+          continue;
+        }
+
+        if (execMode === 'in-conv') {
+          await appWebAPI.client.conversations.invite({
+            channel: channelId,
+            users: user.id || '',
+          });
+          await say(
+            `[INFO] email: ${email} user.name: ${user.name} channelId: ${channelId} の招待を行いました。`,
+          );
+        } else if (execMode === 'kick-conv') {
+          await appWebAPI.client.conversations.kick({
+            channel: channelId,
+            user: user.id || '',
+          }); // 削除
+          await say(
+            `[INFO] email: ${email} user.name: ${user.name} channelId: ${channelId} の削除を行いました。`,
+          );
+        } else {
+          await say(
+            `[INFO] execMode: ${execMode} は対応していないコマンドです。`,
+          );
+        }
+
+        counter++;
+      } catch (err) {
+        await say(`[ERROR] APIの実行エラー email: ${email} err: ${err}`);
+      }
+    }
+    await say(`[INFO] 全 ${counter} 件の処理を終えました。`);
+  },
+);
+
 /**
  * 指定時間処理を停止する関数
  * @param {number} ms 待機するミリ秒数
